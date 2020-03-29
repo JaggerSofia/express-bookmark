@@ -1,3 +1,4 @@
+const path = require('path')
 const express = require('express')
 const { isWebUri } = require('valid-url')
 const xss = require('xss')
@@ -62,7 +63,7 @@ bookmarksRouter
         logger.info(`Bookmark with id ${bookmark.id} created.`)
         res
           .status(201)
-          .location(`/bookmarks/${bookmark.id}`)
+          .location(path.posix.join(req.originalUrl, `${bookmark.id}`))
           .json(serializeBookmark(bookmark))
       })
       .catch(next)
@@ -96,6 +97,30 @@ bookmarksRouter
     )
       .then(numRowsAffected => {
         logger.info(`Bookmark with id ${bookmark_id} deleted.`)
+        res.status(204).end()
+      })
+      .catch(next)
+  })
+  
+  .patch(jsonParser, (req, res, next) => {
+    const { title, content, style } = req.body
+    const articleToUpdate = { title, content, style }
+
+    const numberOfValues = Object.values(articleToUpdate).filter(Boolean).length
+    if (numberOfValues === 0) {
+      return res.status(400).json({
+        error: {
+          message: `Request body must contain either 'title', 'style' or 'content'`
+        }
+      })
+    }
+
+    ArticlesService.updateArticle(
+      req.app.get('db'),
+      req.params.article_id,
+      articleToUpdate
+    )
+      .then(numRowsAffected => {
         res.status(204).end()
       })
       .catch(next)
